@@ -1,0 +1,12 @@
+{
+  "name": "TTT+",
+  "version": "0.1.0",
+  "description": "tic-tac-toe+",
+  "main": "index.js",
+  "author": "ikanoano <ikanoano@users.noreply.github.com>",
+  "devDependencies": {
+    "eslint": "^8.3.0",
+    "eslint-config-prettier": "^8.3.0",
+    "prettier": "^2.4.1"
+  }
+}

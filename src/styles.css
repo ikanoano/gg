@@ -1,0 +1,47 @@
+.box {
+  display: flex;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+.tables {
+  box-sizing: border-box;
+  margin: 20px;
+}
+
+.player1 {
+  color: limegreen;
+}
+.player2 {
+  color: magenta;
+}
+.pieceLarge,
+.pieceMiddle,
+.pieceSmall {
+  margin: 0px;
+  font-weight: bold;
+}
+.pieceLarge {
+  font-size: 90px;
+}
+.pieceMiddle {
+  font-size: 60px;
+}
+.pieceSmall {
+  font-size: 30px;
+}
+
+td {
+  height: 100px;
+  width: 100px;
+  text-align: center;
+  border: solid 4px;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+p {
+  font-size: 30px;
+}

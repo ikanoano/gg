@@ -10,25 +10,50 @@
 }
 
 .player1 {
-  color: limegreen;
+  background-color: limegreen;
 }
 .player2 {
-  color: magenta;
+  background-color: magenta;
 }
 .pieceLarge,
 .pieceMiddle,
 .pieceSmall {
-  margin: 0px;
-  font-weight: bold;
+  margin: 0px auto;
+  border-radius: 50%;
 }
 .pieceLarge {
-  font-size: 90px;
+  height: 90%;
+  width: 90%;
 }
 .pieceMiddle {
-  font-size: 60px;
+  height: 60%;
+  width: 60%;
 }
 .pieceSmall {
-  font-size: 30px;
+  height: 30%;
+  width: 30%;
+}
+.message {
+  height: 48px;
+  overflow: hidden;
+}
+.message p {
+  margin: 0px auto;
+  animation: fadeout 3s;
+  animation-fill-mode: both;
+  font-size: 16px;
+  text-align: center;
+}
+@keyframes fadeout {
+  0% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 td {

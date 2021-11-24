@@ -8,7 +8,18 @@ const front = {
   stage: table2array(document.querySelector('#stage').firstElementChild),
   board: table2array(document.querySelector('#board').firstElementChild),
   state: document.querySelector('#state'),
+  message: document.querySelector('.message'),
 };
+// show temporally message
+function notice(str) {
+  let p = document.createElement('p');
+  p.textContent = str;
+  p.id = 'p' + Math.floor(Math.random() * 65536);
+  front.message.prepend(p);
+  setTimeout(() => {
+    document.querySelector('#' + p.id).remove();
+  }, 3000);
+}
 
 // map a table to a 2d array
 function table2array(tbl) {
@@ -183,32 +194,31 @@ function init() {
       r.forEach((c, x) => {
         let p = document.createElement('p');
         // Place ◯ as a piece. Its size is its font-size that its class decides
-        p.textContent = '◯';
         c.innerHTML = '';
         c.appendChild(p);
 
         c.addEventListener('click', function () {
-          //alert(y + ',' + x + ',' + player + ',' + piece);
+          //notice(y + ',' + x + ',' + player + ',' + piece);
           if (game.state == State.staging) {
             // before pick, check if the piece attempt to pick is yours and placable to the board
             const [playerAttempt, pieceAttempt] = board
               .cell(y, x)
               .visiblePiece();
             if (playerAttempt != game.turn) {
-              alert('Visible piece here is not yours');
+              notice('Visible piece here is not yours');
               return;
             }
             if (!game.board.isPlaceableAnywhere(pieceAttempt)) {
               // Checking if the piece is placable to anywhere before picking.
               // If placable, that means, there is a place the piece can place to other than the current place.
-              alert(
+              notice(
                 'The piece you attempt to pick is not placable to the board',
               );
               return;
             }
             const pick = board.cell(y, x).pick(game.turn);
             if (pick === null) {
-              alert('There is not your visible piece here');
+              notice('There is not your visible piece here');
               return; // do nothing
             }
             // Memory where the piece comes from
@@ -223,7 +233,7 @@ function init() {
           } else if (game.state == State.commit) {
             if (board != game.board) {
               // Player must place the piece to the main board
-              alert('You can place the piece only to the center board !!');
+              notice('You can place the piece only to the center board');
               return;
             }
             if (
@@ -231,8 +241,8 @@ function init() {
               y == game.lastPicked[0] &&
               x == game.lastPicked[1]
             ) {
-              alert(
-                'You can not place back to the cell where the piece comes from !!',
+              notice(
+                'You can not place back to the cell where the piece came from',
               );
               return;
             }
@@ -242,7 +252,7 @@ function init() {
                 .isPlaceable(game.stage.cell(0, 0).visiblePiece()[1]) // [1] is a piece to place
             ) {
               // Player must select a cell which accepts the staging piece
-              alert('This cell is occupied !!');
+              notice('This cell is occupied');
               return; // do nothing
             }
             const pick = game.stage.cell(0, 0).pick(game.turn);

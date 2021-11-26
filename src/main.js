@@ -303,13 +303,9 @@ function init() {
                 return;
               }
               const pick = board.cell(y, x).pick(game.turn);
-              // Memory where the piece comes from
-              if (board == game.board) {
-                game.lastPicked = [y, x];
-              } else {
-                game.lastPicked = null;
-              }
-              game.stage.cell(0, 0).place(game.turn, pick);
+              // Memory where the piece comes from unless it comes from unstaged.
+              game.lastPicked = board == game.board ? [y, x] : null;
+              game.stage.cell(0, 0).place(game.turn, pick); // Place picked piece to the stage
               break;
             }
             case State.commit: {
@@ -326,6 +322,8 @@ function init() {
               board.cell(y, x).place(game.turn, pick);
               break;
             }
+            case State.complete:
+              break;
             default:
               console.assert(false, 'unknown state');
               break;
@@ -364,12 +362,3 @@ function init() {
   updateFront();
 }
 init();
-
-// Store what/how many pieces are placed
-
-class GameState {
-  constructor() {
-    this._p1 = new Player();
-    this._p2 = new Player();
-  }
-}

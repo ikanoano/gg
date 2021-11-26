@@ -46,6 +46,7 @@ const Player = {
 const State = {
   staging: 0,
   commit: 1,
+  complete: 8,
 };
 
 class Cell {
@@ -61,7 +62,7 @@ class Cell {
     this._p2 = initp2;
     console.assert(
       (this._p1 & this._p2) == 0,
-      'Placed piece at a cell must be exclusive',
+      "Placed pieces that have the same size at a cell must be either Player's. Not both's.",
     );
   }
   visiblePiece() {
@@ -76,6 +77,10 @@ class Cell {
       (pieces & Piece.Middle) ? Piece.Middle :
                                 Piece.Small;
     return [player, visible];
+  }
+  whoseCell() {
+    if (this._p1 == this._p2) return null; // they must be 0 when no piece is placed
+    return this._p1 > this._p2 ? Player.p1 : Player.p2; // Bigger has larger piece
   }
   isPlaceable(toPlace) {
     // player can place a piece unless cell has the same or larger pieces.
@@ -135,7 +140,49 @@ class Board {
       });
     });
   }
+  serializeMyCell(player) {
+    //  If 'player' is Player.p1 and 3x3 board is ...
+    //  2.1     '1' represents a vislble piece Player.p1 has placed
+    //  121     '2' represents a vislble piece Player.p2 has placed
+    //  ..1     '.' represents nothing
+    //  then return = 0b 001 101 001
+    let vvv = 0;
+    for (let y = 0; y < this._b.length; y++) {
+      for (let x = 0; x < this._b[0].length; x++) {
+        vvv = (vvv << 1) | (this._b[y][x].whoseCell() == player ? 1 : 0);
+      }
+    }
+    return vvv;
+  }
 }
+
+class Judge {
+  constructor() {
+    // prettier-ignore
+    const winPattern = [
+      new Board(3,3,(y,x)=> {return [y==0?Piece.Small:Piece.None, Piece.None];}),   // -
+      new Board(3,3,(y,x)=> {return [y==1?Piece.Small:Piece.None, Piece.None];}),
+      new Board(3,3,(y,x)=> {return [y==2?Piece.Small:Piece.None, Piece.None];}),
+      new Board(3,3,(y,x)=> {return [x==0?Piece.Small:Piece.None, Piece.None];}),   // |
+      new Board(3,3,(y,x)=> {return [x==1?Piece.Small:Piece.None, Piece.None];}),
+      new Board(3,3,(y,x)=> {return [x==2?Piece.Small:Piece.None, Piece.None];}),
+      new Board(3,3,(y,x)=> {return [y==x?Piece.Small:Piece.None, Piece.None];}),   // \
+      new Board(3,3,(y,x)=> {return [2-y==x?Piece.Small:Piece.None, Piece.None];}), // /
+    ];
+    this._winSerialized = winPattern.map((w) => w.serializeMyCell(Player.p1));
+  }
+  // return which player wins
+  judge(board) {
+    const isWin = (player) => {
+      const s = board.serializeMyCell(player);
+      return this._winSerialized.some((win) => win == s);
+    };
+    if (isWin(Player.p1)) return Player.p1;
+    if (isWin(Player.p2)) return Player.p2;
+    return null;
+  }
+}
+const judger = new Judge();
 
 const game = {
   unstaged_p1: new Board(3, 2, (y) => {
@@ -258,8 +305,9 @@ function init() {
             } else {
               game.lastPicked = null;
             }
-            // step next
             game.stage.cell(0, 0).place(game.turn, pick);
+
+            // step next
             game.state = State.commit;
           } else if (game.state == State.commit) {
             const error = checkPlaceable(board, y, x);
@@ -273,12 +321,25 @@ function init() {
               'There should be my piece here at commit state',
             );
             board.cell(y, x).place(game.turn, pick);
+
             // step next
             game.state = State.staging;
             game.turn = game.turn == Player.p1 ? Player.p2 : Player.p1; // flip player
+          } else if (game.state == State.complete) {
+            // nothing to do
           } else {
             console.assert(false, 'unknown state');
           }
+
+          // Is the game over by this pick or place?
+          const win = judger.judge(board);
+          if (win !== null) {
+            notice(
+              'Game! ' + (win == Player.p1 ? 'Player1' : 'Player2') + ' wins!',
+            );
+            game.state = State.complete;
+          }
+
           updateFront();
         });
       });

@@ -56,6 +56,19 @@
   }
 }
 
+.blink {
+  animation: blink 1.5s infinite both;
+}
+@keyframes blink {
+  40%,
+  60% {
+    background-color: rgb(255, 255, 255);
+  }
+  50% {
+    background-color: rgb(198, 239, 255);
+  }
+}
+
 td {
   height: 100px;
   width: 100px;

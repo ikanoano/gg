@@ -97,7 +97,7 @@ class Cell {
   }
   place(player, piece) {
     console.assert(piece != Piece.None, 'No piece to place');
-    if (!this.isPlaceable(piece)) return false; // do nothing if unplacable
+    if (!this.isPlaceable(piece)) return false; // do nothing if unplaceable
     //let where2place = player == Player.p1 ? this._p1 : this._p2;
     //where2place |= piece;
     if (player == Player.p1) {
@@ -173,6 +173,19 @@ function updateFront() {
           piece == Piece.Small  ? 'pieceSmall '  :
                                   'none ';
         p.className += player == Player.p1 ? 'player1' : 'player2';
+        // prettier-ignore
+        const valid =
+          (game.state == State.staging && checkPickable(board, y, x) === null) ||
+          (game.state == State.commit && checkPlaceable(board, y, x) === null);
+        // if this cell is valid to click, blink it
+        c.className = c.className.replace(' blink', '');
+        // Schedule blinking.
+        // There is interval between blink-off to blink-on so that animation phase gets reset. Maybe firefox-only behavior though
+        if (valid) {
+          setTimeout(() => {
+            c.className += ' blink';
+          }, 100);
+        }
       });
     });
   };
@@ -185,6 +198,40 @@ function updateFront() {
     (game.state == State.staging ? 'Pick' : 'Place') +
     ' your piece, ' +
     (game.turn == Player.p1 ? 'Player1' : 'Player2');
+}
+
+// check if the piece attempt to pick is yours and placeable to the board
+// return message if error
+function checkPickable(board, y, x) {
+  const [playerAttempt, pieceAttempt] = board.cell(y, x).visiblePiece();
+  if (playerAttempt != game.turn) {
+    return 'Visible piece here is not yours';
+  }
+  if (!game.board.isPlaceableAnywhere(pieceAttempt)) {
+    // Checking if the piece is placeable to anywhere before picking.
+    // If placeable, that means, there is a place the piece can place to other than the current place.
+    return 'The piece you attempt to pick is not placeable to the board, so unable to pick';
+  }
+  return null; // no error
+}
+function checkPlaceable(board, y, x) {
+  if (board != game.board) {
+    return 'You can place the piece only to the center board';
+  }
+  if (
+    game.lastPicked !== null &&
+    y == game.lastPicked[0] &&
+    x == game.lastPicked[1]
+  ) {
+    return 'You can not place the piece back to the cell where the piece came from';
+  }
+  if (
+    !board.cell(y, x).isPlaceable(game.stage.cell(0, 0).visiblePiece()[1]) // [1] is a piece to place
+  ) {
+    // Player must select a cell which accepts the staging piece
+    return 'This cell is occupied';
+  }
+  return null;
 }
 
 function init() {
@@ -200,27 +247,13 @@ function init() {
         c.addEventListener('click', function () {
           //notice(y + ',' + x + ',' + player + ',' + piece);
           if (game.state == State.staging) {
-            // before pick, check if the piece attempt to pick is yours and placable to the board
-            const [playerAttempt, pieceAttempt] = board
-              .cell(y, x)
-              .visiblePiece();
-            if (playerAttempt != game.turn) {
-              notice('Visible piece here is not yours');
-              return;
-            }
-            if (!game.board.isPlaceableAnywhere(pieceAttempt)) {
-              // Checking if the piece is placable to anywhere before picking.
-              // If placable, that means, there is a place the piece can place to other than the current place.
-              notice(
-                'The piece you attempt to pick is not placable to the board',
-              );
+            // check if pickable
+            const error = checkPickable(board, y, x);
+            if (error !== null) {
+              notice(error);
               return;
             }
             const pick = board.cell(y, x).pick(game.turn);
-            if (pick === null) {
-              notice('There is not your visible piece here');
-              return; // do nothing
-            }
             // Memory where the piece comes from
             if (board == game.board) {
               game.lastPicked = [y, x];
@@ -231,29 +264,10 @@ function init() {
             game.stage.cell(0, 0).place(game.turn, pick);
             game.state = State.commit;
           } else if (game.state == State.commit) {
-            if (board != game.board) {
-              // Player must place the piece to the main board
-              notice('You can place the piece only to the center board');
+            const error = checkPlaceable(board, y, x);
+            if (error !== null) {
+              notice(error);
               return;
-            }
-            if (
-              game.lastPicked !== null &&
-              y == game.lastPicked[0] &&
-              x == game.lastPicked[1]
-            ) {
-              notice(
-                'You can not place back to the cell where the piece came from',
-              );
-              return;
-            }
-            if (
-              !board
-                .cell(y, x)
-                .isPlaceable(game.stage.cell(0, 0).visiblePiece()[1]) // [1] is a piece to place
-            ) {
-              // Player must select a cell which accepts the staging piece
-              notice('This cell is occupied');
-              return; // do nothing
             }
             const pick = game.stage.cell(0, 0).pick(game.turn);
             console.assert(

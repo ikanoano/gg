@@ -239,10 +239,8 @@ function init() {
   const connectTB = (table, board) => {
     table.forEach((r, y) => {
       r.forEach((c, x) => {
-        let p = document.createElement('p');
-        // Place ◯ as a piece. Its size is its font-size that its class decides
-        c.innerHTML = '';
-        c.appendChild(p);
+        // Place ◯ (drawn via css) as a piece.
+        c.appendChild(document.createElement('p'));
 
         c.addEventListener('click', function () {
           //notice(y + ',' + x + ',' + player + ',' + piece);

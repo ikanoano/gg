@@ -175,7 +175,7 @@ class Judge {
   judge(board) {
     const isWin = (player) => {
       const s = board.serializeMyCell(player);
-      return this._winSerialized.some((win) => win == s);
+      return this._winSerialized.some((win) => (win & s) == win);
     };
     if (isWin(Player.p1)) return Player.p1;
     if (isWin(Player.p2)) return Player.p2;
@@ -331,11 +331,12 @@ function init() {
 
           // Step the state
           // ... before that, isn't the game over by this pick or place?
-          const win = judger.judge(board);
+          const win = judger.judge(game.board);
           if (win !== null) {
             const playerText = win == Player.p1 ? 'Player1' : 'Player2';
-            notice('Game! ' + playerText + ' wins!');
+            notice('Game! ' + playerText + ' win!');
             game.state = State.complete;
+            game.turn = win; // Store which player wins to game.turn
           }
 
           switch (game.state) {

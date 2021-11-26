@@ -241,10 +241,13 @@ function updateFront() {
   updateTable(front.stage, game.stage);
   updateTable(front.board, game.board);
 
-  front.state.textContent =
-    (game.state == State.staging ? 'Pick' : 'Place') +
-    ' your piece, ' +
-    (game.turn == Player.p1 ? 'Player1' : 'Player2');
+  const stateText = game.state == State.staging ? 'Pick' : 'Place';
+  const playerText = game.turn == Player.p1 ? 'Player1' : 'Player2';
+  if (game.state == State.complete) {
+    front.state.textContent = playerText + ' WIN !';
+  } else {
+    front.state.textContent = stateText + ' your piece, ' + playerText;
+  }
 }
 
 // check if the piece attempt to pick is yours and placeable to the board
@@ -291,53 +294,62 @@ function init() {
 
         c.addEventListener('click', function () {
           //notice(y + ',' + x + ',' + player + ',' + piece);
-          if (game.state == State.staging) {
-            // check if pickable
-            const error = checkPickable(board, y, x);
-            if (error !== null) {
-              notice(error);
-              return;
+          switch (game.state) {
+            case State.staging: {
+              // check if pickable
+              const error = checkPickable(board, y, x);
+              if (error !== null) {
+                notice(error);
+                return;
+              }
+              const pick = board.cell(y, x).pick(game.turn);
+              // Memory where the piece comes from
+              if (board == game.board) {
+                game.lastPicked = [y, x];
+              } else {
+                game.lastPicked = null;
+              }
+              game.stage.cell(0, 0).place(game.turn, pick);
+              break;
             }
-            const pick = board.cell(y, x).pick(game.turn);
-            // Memory where the piece comes from
-            if (board == game.board) {
-              game.lastPicked = [y, x];
-            } else {
-              game.lastPicked = null;
+            case State.commit: {
+              const error = checkPlaceable(board, y, x);
+              if (error !== null) {
+                notice(error);
+                return;
+              }
+              const pick = game.stage.cell(0, 0).pick(game.turn);
+              console.assert(
+                pick !== null,
+                'There should be my piece here at commit state',
+              );
+              board.cell(y, x).place(game.turn, pick);
+              break;
             }
-            game.stage.cell(0, 0).place(game.turn, pick);
-
-            // step next
-            game.state = State.commit;
-          } else if (game.state == State.commit) {
-            const error = checkPlaceable(board, y, x);
-            if (error !== null) {
-              notice(error);
-              return;
-            }
-            const pick = game.stage.cell(0, 0).pick(game.turn);
-            console.assert(
-              pick !== null,
-              'There should be my piece here at commit state',
-            );
-            board.cell(y, x).place(game.turn, pick);
-
-            // step next
-            game.state = State.staging;
-            game.turn = game.turn == Player.p1 ? Player.p2 : Player.p1; // flip player
-          } else if (game.state == State.complete) {
-            // nothing to do
-          } else {
-            console.assert(false, 'unknown state');
+            default:
+              console.assert(false, 'unknown state');
+              break;
           }
 
-          // Is the game over by this pick or place?
+          // Step the state
+          // ... before that, isn't the game over by this pick or place?
           const win = judger.judge(board);
           if (win !== null) {
-            notice(
-              'Game! ' + (win == Player.p1 ? 'Player1' : 'Player2') + ' wins!',
-            );
+            const playerText = win == Player.p1 ? 'Player1' : 'Player2';
+            notice('Game! ' + playerText + ' wins!');
             game.state = State.complete;
+          }
+
+          switch (game.state) {
+            case State.staging:
+              game.state = State.commit;
+              break;
+            case State.commit:
+              game.state = State.staging;
+              game.turn = game.turn ^ 1; // flip player
+              break;
+            default:
+              break;
           }
 
           updateFront();

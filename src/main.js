@@ -159,7 +159,7 @@ class Board {
 class Judge {
   constructor() {
     // prettier-ignore
-    const winPattern = [
+    this._winPattern = [
       new Board(3,3,(y,x)=> {return [y==0?Piece.Small:Piece.None, Piece.None];}),   // -
       new Board(3,3,(y,x)=> {return [y==1?Piece.Small:Piece.None, Piece.None];}),
       new Board(3,3,(y,x)=> {return [y==2?Piece.Small:Piece.None, Piece.None];}),
@@ -169,17 +169,18 @@ class Judge {
       new Board(3,3,(y,x)=> {return [y==x?Piece.Small:Piece.None, Piece.None];}),   // \
       new Board(3,3,(y,x)=> {return [2-y==x?Piece.Small:Piece.None, Piece.None];}), // /
     ];
-    this._winSerialized = winPattern.map((w) => w.serializeMyCell(Player.p1));
+    this._winSerialized = this._winPattern.map((w) =>
+      w.serializeMyCell(Player.p1),
+    );
   }
-  // return which player wins
-  judge(board) {
-    const isWin = (player) => {
-      const s = board.serializeMyCell(player);
-      return this._winSerialized.some((win) => (win & s) == win);
-    };
-    if (isWin(Player.p1)) return Player.p1;
-    if (isWin(Player.p2)) return Player.p2;
-    return null;
+
+  // return matching win patterns. if length==0, not win
+  judge(board, player) {
+    // Is there winPattern in the board ?
+    const s = board.serializeMyCell(player);
+    return this._winSerialized.flatMap(
+      (pattern, i) => ((s & pattern) == pattern ? [this._winPattern[i]] : []), // add matching board
+    );
   }
 }
 const judger = new Judge();
@@ -204,6 +205,7 @@ const game = {
   // Store where a piece is picked up. The piece can't place back to here in single turn.
   // Note that ones from unstaged piece can be placed anywhere
   lastPicked: [0, 0],
+  winPattern: null,
 };
 
 function updateFront() {
@@ -223,7 +225,8 @@ function updateFront() {
         // prettier-ignore
         const valid =
           (game.state == State.staging && checkPickable(board, y, x) === null) ||
-          (game.state == State.commit && checkPlaceable(board, y, x) === null);
+          (game.state == State.commit && checkPlaceable(board, y, x) === null) ||
+          (game.state == State.complete && board == game.board && game.winPattern.some(pattern => pattern.cell(y,x).whoseCell()!=null));
         // if this cell is valid to click, blink it
         c.className = c.className.replace(' blink', '');
         // Schedule blinking.
@@ -331,12 +334,14 @@ function init() {
 
           // Step the state
           // ... before that, isn't the game over by this pick or place?
-          const win = judger.judge(game.board);
-          if (win !== null) {
-            const playerText = win == Player.p1 ? 'Player1' : 'Player2';
+          const winnable = game.turn ^ (game.state == State.staging); // which player can win now?
+          const winPattern = judger.judge(game.board, winnable);
+          if (winPattern.length > 0) {
+            const playerText = winnable == Player.p1 ? 'Player1' : 'Player2';
+            game.winPattern = winPattern;
             notice('Game! ' + playerText + ' win!');
             game.state = State.complete;
-            game.turn = win; // Store which player wins to game.turn
+            game.turn = winnable; // Store which player wins to game.turn
           }
 
           switch (game.state) {

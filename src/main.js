@@ -1,3 +1,4 @@
+'use strict';
 const front = {
   unstaged_p1: table2array(
     document.querySelector('#unstaged_p1').firstElementChild,
@@ -9,6 +10,11 @@ const front = {
   board: table2array(document.querySelector('#board').firstElementChild),
   state: document.querySelector('#state'),
   message: document.querySelector('.message'),
+  turn: document.querySelector('#turnNum'),
+  replay: document.querySelector('#turnNumIn'),
+
+  // required by front update
+  toBlink: [],
 };
 // show temporally message
 function notice(str) {
@@ -23,7 +29,7 @@ function notice(str) {
 
 // map a table to a 2d array
 function table2array(tbl) {
-  a = [];
+  let a = [];
   for (let i = 0; i < tbl.rows.length; i++) {
     a[i] = [];
     for (let j = 0; j < tbl.rows[i].cells.length; j++) {
@@ -185,7 +191,7 @@ class Judge {
 }
 const judger = new Judge();
 
-const game = {
+let game = {
   unstaged_p1: new Board(3, 2, (y) => {
     return [
       y == 0 ? Piece.Large : y == 1 ? Piece.Middle : Piece.Small,
@@ -202,13 +208,20 @@ const game = {
   board: new Board(3, 3),
   state: State.staging,
   turn: Player.p1,
+  turnNum: 0,
   // Store where a piece is picked up. The piece can't place back to here in single turn.
   // Note that ones from unstaged piece can be placed anywhere
   lastPicked: [0, 0],
   winPattern: null,
 };
+let gameHistory = [];
 
 function updateFront() {
+  // before updating, cancel unfinished update
+  console.assert(front.toBlink?.constructor == Array, 'toBlink is not there');
+  front.toBlink.forEach((b) => window.clearTimeout(b));
+  front.toBlink = []; // clear
+
   const updateTable = (table, board) => {
     table.forEach((r, y) => {
       r.forEach((c, x) => {
@@ -232,9 +245,11 @@ function updateFront() {
         // Schedule blinking.
         // There is interval between blink-off to blink-on so that animation phase gets reset. Maybe firefox-only behavior though
         if (valid) {
-          setTimeout(() => {
-            c.className += ' blink';
-          }, 100);
+          front.toBlink.push(
+            setTimeout(() => {
+              c.className += ' blink';
+            }, 100),
+          );
         }
       });
     });
@@ -251,6 +266,10 @@ function updateFront() {
   } else {
     front.state.textContent = stateText + ' your piece, ' + playerText;
   }
+
+  const turnNumText = game.turnNum / 2 + 0.5;
+  front.turn.textContent =
+    game.state == State.complete ? 'Finish' : 'Turn ' + turnNumText;
 }
 
 // check if the piece attempt to pick is yours and placeable to the board
@@ -296,6 +315,9 @@ function init() {
         c.appendChild(document.createElement('p'));
 
         c.addEventListener('click', function () {
+          if (gameHistory[gameHistory.length - 1].state == State.complete) {
+            return; // don't modify anything after game is over
+          }
           //notice(y + ',' + x + ',' + player + ',' + piece);
           switch (game.state) {
             case State.staging: {
@@ -309,6 +331,7 @@ function init() {
               // Memory where the piece comes from unless it comes from unstaged.
               game.lastPicked = board == game.board ? [y, x] : null;
               game.stage.cell(0, 0).place(game.turn, pick); // Place picked piece to the stage
+              game.turnNum++;
               break;
             }
             case State.commit: {
@@ -323,10 +346,9 @@ function init() {
                 'There should be my piece here at commit state',
               );
               board.cell(y, x).place(game.turn, pick);
+              game.turnNum++;
               break;
             }
-            case State.complete:
-              break;
             default:
               console.assert(false, 'unknown state');
               break;
@@ -342,6 +364,11 @@ function init() {
             notice('Game! ' + playerText + ' win!');
             game.state = State.complete;
             game.turn = winnable; // Store which player wins to game.turn
+
+            // Prepare for replay
+            front.replay.max = game.turnNum;
+            front.replay.value = game.turnNum;
+            front.replay.hidden = false;
           }
 
           switch (game.state) {
@@ -352,9 +379,10 @@ function init() {
               game.state = State.staging;
               game.turn = game.turn ^ 1; // flip player
               break;
-            default:
-              break;
           }
+
+          // add curent turn to history
+          gameHistory.push(_.cloneDeep(game));
 
           updateFront();
         });
@@ -365,6 +393,19 @@ function init() {
   connectTB(front.unstaged_p2, game.unstaged_p2);
   connectTB(front.stage, game.stage);
   connectTB(front.board, game.board);
+  front.replay.addEventListener('input', () => {
+    game = gameHistory[front.replay.value]; // recall the game at this turn
+    updateFront();
+  });
+  front.replay.hidden = true;
   updateFront();
 }
-init();
+window.onload = function () {
+  let lodash = document.createElement('script');
+  lodash.src = 'https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js';
+  document.head.append(lodash);
+  lodash.onload = function () {
+    gameHistory.push(_.cloneDeep(game));
+    init();
+  };
+};

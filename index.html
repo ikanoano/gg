@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <title>TTT+</title>
     <link rel="stylesheet" href="src/styles.css">
+    <script src="src/main.js" type="module"></script>
   </head>
 
   <body>
@@ -42,6 +43,10 @@
           </table>
         </div>
       </div>
+      <div class="replay">
+        <p id="turnNum"></p>
+        <input id="turnNumIn" type="range" name="replay" min="0" max="1" step="1" value="5">
+      </div>
       <div class="message">
       </div>
     </div>
@@ -50,6 +55,5 @@
         <li>Developed at <a href="https://github.com/ikanoano/ttt">ikanoano/ttt</a></li>
       </ul>
     </footer>
-    <script src="src/main.js"></script>
   </body>
 </html>

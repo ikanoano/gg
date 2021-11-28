@@ -33,6 +33,14 @@
   height: 30%;
   width: 30%;
 }
+.replay {
+  padding: 0px;
+  padding-left: 30px;
+  padding-right: 30px;
+}
+.replay input {
+  width: 100%;
+}
 .message {
   height: 48px;
   overflow: hidden;
@@ -81,5 +89,7 @@ table {
 }
 
 p {
+  margin: 10px;
   font-size: 30px;
+  text-align: center;
 }
